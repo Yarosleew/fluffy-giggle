@@ -13,7 +13,6 @@ from aiogram.types import (
 )
 
 # --- НАЛАШТУВАННЯ ---
-# УВАГА: Ваш токен було засвічено. Краще згенеруйте новий у @BotFather!
 API_TOKEN = "8742759318:AAFPb8YA4nosD5GsXcsjZGvo76SvY6b9ZHc"
 
 logging.basicConfig(
@@ -37,10 +36,18 @@ main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Привіт 👋"), KeyboardButton(text="Як справи? 😊")],
         [KeyboardButton(text="Анекдот 🤣"), KeyboardButton(text="Магазин 🛒")],
+        [KeyboardButton(text="Цікавий факт про Dota 2 🎮")],  # Нова кнопка
         [KeyboardButton(text="Меню Inline 🔘")]
     ],
     resize_keyboard=True,
     input_field_placeholder="Оберіть пункт меню..."
+)
+
+# Кнопка для гравців (Inline)
+dota_players_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Найвідоміші гравці 🏆", callback_data="top_players")]
+    ]
 )
 
 # Вбудовані кнопки (Inline)
@@ -57,7 +64,7 @@ inline_menu = InlineKeyboardMarkup(
     ]
 )
 
-# Клавіатура магазину (Inline з використанням CallbackData)
+# Клавіатура магазину
 shop_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="🍎 Яблуко", callback_data=BuyCallback(item="apple").pack())],
@@ -82,7 +89,7 @@ async def cmd_help(message: Message):
     await message.answer("Використовуй кнопки меню! Команда /start оновить інтерфейс.")
 
 
-# --- ОБРОБКА ТЕКСТУ ТА МАГАЗИНУ ---
+# --- ОБРОБКА ТЕКСТУ ---
 
 @dp.message(F.text)
 async def handle_text(message: Message):
@@ -95,6 +102,16 @@ async def handle_text(message: Message):
     elif text == "анекдот 🤣":
         await message.answer(
             "— Куме, а що таке 'хмарні технології'?\n— Це коли твої гроші випаровуються швидше, ніж ти встигаєш їх заробити! ☁️")
+
+    # Новий функціонал про Dota 2
+    elif text == "цікавий факт про dota 2 🎮":
+        fact_text = (
+            "🎮 **Dota 2** — одна з найпопулярніших кіберспортивних дисциплін, "
+            "що вийшла у 2013 році та славиться понад 120 унікальними героями, "
+            "величезними призовими фондами (що перевищували $40 млн на The International)."
+        )
+        await message.answer(fact_text, reply_markup=dota_players_keyboard, parse_mode="Markdown")
+
     elif text == "магазин 🛒":
         await message.answer("Оберіть товар у нашому маркеті:", reply_markup=shop_keyboard)
     elif text == "меню inline 🔘":
@@ -103,14 +120,27 @@ async def handle_text(message: Message):
         await message.answer("Будь ласка, оберіть варіант з меню нижче 👇")
 
 
-# --- ОБРОБКА CALLBACK (INLINE КНОПКИ) ---
+# --- ОБРОБКА CALLBACK ---
 
-# Обробка покупок через фільтр класу BuyCallback
+@dp.callback_query(F.data == "top_players")
+async def callback_players(callback: CallbackQuery):
+    players_info = (
+        "🌟 **Легендарні гравці:**\n\n"
+        "1. **Йохан «N0tail» Сундштайн (Danmark):** Один із найуспішніших гравців в історії, "
+        "капітан OG, який виграв два The International (2018, 2019).\n\n"
+        "2. **Амер «Miracle-» Аль-Баркаві (Jordan/Poland):** Відомий своїми неймовірними "
+        "механічними навичками та грою на центральній лінії (mid) та кері (carry).\n\n"
+        "3. **Данило «Dendi» Ішутін (Ukraine):** Легендарний мідер, символ перших років Dota 2 "
+        "та переможець першого The International (2011) у складі Natus Vincere."
+    )
+    await callback.message.answer(players_info, parse_mode="Markdown")
+    await callback.answer()
+
+
 @dp.callback_query(BuyCallback.filter())
 async def handle_buy_callback(callback: CallbackQuery, callback_data: BuyCallback):
     item_name = callback_data.item
     translations = {"apple": "Яблуко", "banana": "Банан", "grape": "Виноград"}
-
     await callback.message.answer(f"Ти обрав: {translations.get(item_name, item_name)} ✅")
     await callback.answer()
 
@@ -137,7 +167,6 @@ async def callback_close(callback: CallbackQuery):
 
 async def main():
     print("Бот запущений та готовий до роботи...")
-    # Видаляємо всі повідомлення, що надійшли поки бот був офлайн
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
